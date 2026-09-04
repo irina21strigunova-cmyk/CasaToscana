@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf7f2;
+  --foreground: #2c2c2c;
+  --milk: #faf7f2;
+  --milk-dark: #f0ebe3;
+  --olive: #6b7b3c;
+  --olive-light: #8a9a5c;
+  --terracotta: #c4725a;
+  --terracotta-dark: #a85a44;
+  --gold: #b8860b;
+  --cream: #f5f0e8;
+  --muted: #7a756c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-milk: var(--milk);
+  --color-milk-dark: var(--milk-dark);
+  --color-olive: var(--olive);
+  --color-olive-light: var(--olive-light);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-dark: var(--terracotta-dark);
+  --color-gold: var(--gold);
+  --color-cream: var(--cream);
+  --color-muted: var(--muted);
+  --font-display: var(--font-cormorant);
+  --font-sans: var(--font-source-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-source-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-display {
+  font-family: var(--font-cormorant), Georgia, serif;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
