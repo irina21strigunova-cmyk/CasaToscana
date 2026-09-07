@@ -93,6 +93,43 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Ошибка создания платежа";
-    return NextResponse.json({ ok: false, error: message }, { status: 400 });
+    const diagnostics =
+      error &&
+      typeof error === "object" &&
+      "diagnostics" in error &&
+      error.diagnostics &&
+      typeof error.diagnostics === "object"
+        ? (error.diagnostics as {
+            name: string | null;
+            message: string | null;
+            causeCode: string | null;
+            causeMessage: string | null;
+          })
+        : null;
+
+    if (diagnostics) {
+      console.error("[payments/create fetch diagnostics]", {
+        name: diagnostics.name,
+        message: diagnostics.message,
+        causeCode: diagnostics.causeCode,
+        causeMessage: diagnostics.causeMessage,
+      });
+    }
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: message,
+        diagnostics: diagnostics
+          ? {
+              name: diagnostics.name,
+              message: diagnostics.message,
+              causeCode: diagnostics.causeCode,
+              causeMessage: diagnostics.causeMessage,
+            }
+          : null,
+      },
+      { status: 400 }
+    );
   }
 }

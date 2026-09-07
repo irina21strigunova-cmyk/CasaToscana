@@ -31,6 +31,34 @@ export function getAppBaseUrl(): string {
   return "http://localhost:3000";
 }
 
+/** Temporary diagnostics for fetch failures — no secrets. */
+export function getSafeFetchErrorDiagnostics(error: unknown): {
+  name: string | null;
+  message: string | null;
+  causeCode: string | null;
+  causeMessage: string | null;
+} {
+  if (!(error instanceof Error)) {
+    return {
+      name: null,
+      message: String(error),
+      causeCode: null,
+      causeMessage: null,
+    };
+  }
+
+  const cause = (error as Error & { cause?: unknown }).cause as
+    | { code?: string; message?: string }
+    | undefined;
+
+  return {
+    name: error.name || null,
+    message: error.message || null,
+    causeCode: cause?.code ? String(cause.code) : null,
+    causeMessage: cause?.message ? String(cause.message).slice(0, 300) : null,
+  };
+}
+
 export async function initPayment(input: {
   amountKopecks: number;
   orderId: string;
@@ -61,12 +89,23 @@ export async function initPayment(input: {
 
   body.Token = buildTbankToken(body, password);
 
-  const response = await fetch(`${apiUrl}/v2/Init`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}/v2/Init`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (error) {
+    const diag = getSafeFetchErrorDiagnostics(error);
+    console.error("[tbank-init-fetch]", diag);
+    const err = new Error(diag.message || "fetch failed") as Error & {
+      diagnostics?: typeof diag;
+    };
+    err.diagnostics = diag;
+    throw err;
+  }
 
   if (!response.ok) {
     throw new Error(`T-Bank Init HTTP ${response.status}`);
@@ -86,12 +125,23 @@ export async function getPaymentState(
   };
   body.Token = buildTbankToken(body, password);
 
-  const response = await fetch(`${apiUrl}/v2/GetState`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}/v2/GetState`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (error) {
+    const diag = getSafeFetchErrorDiagnostics(error);
+    console.error("[tbank-getstate-fetch]", diag);
+    const err = new Error(diag.message || "fetch failed") as Error & {
+      diagnostics?: typeof diag;
+    };
+    err.diagnostics = diag;
+    throw err;
+  }
 
   if (!response.ok) {
     throw new Error(`T-Bank GetState HTTP ${response.status}`);
