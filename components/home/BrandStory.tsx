@@ -14,8 +14,8 @@ export function BrandStory() {
 
         <p className="mt-5 text-[14px] font-light leading-[1.75] text-muted">
           В сердце Флоренции, среди оливковых рощ и терракотовых крыш, рождается
-          косметика Idea Toscana — соединение вековых традиций и современной
-          нежности.
+          косметика Idea Toscana — соединение вековых традиций и силы Тосканской
+          природы.
         </p>
 
         <p className="mt-4 text-[14px] font-light leading-[1.75] text-muted">
