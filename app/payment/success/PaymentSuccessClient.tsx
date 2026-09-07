@@ -117,7 +117,7 @@ export default function PaymentSuccessClient() {
             Оплата прошла
           </p>
           <h2 className="font-display mt-3 text-2xl font-semibold text-foreground">
-            Заказ принят
+            Заказ оплачен
           </h2>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
             Спасибо! Оплата подтверждена, заказ принят в работу.

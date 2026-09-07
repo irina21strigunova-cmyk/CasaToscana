@@ -75,8 +75,8 @@ export async function initPayment(input: {
     OrderId: input.orderId,
     Description: input.description.slice(0, 140),
     NotificationURL: `${baseUrl}/api/payments/notification`,
-    SuccessURL: `${baseUrl}/payment/success`,
-    FailURL: `${baseUrl}/payment/fail`,
+    SuccessURL: `${baseUrl}/payment/success?orderId=${encodeURIComponent(input.orderId)}`,
+    FailURL: `${baseUrl}/payment/fail?orderId=${encodeURIComponent(input.orderId)}`,
     Language: "ru",
   };
 

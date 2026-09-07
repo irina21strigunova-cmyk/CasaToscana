@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrderByOrderId } from "@/lib/orders/store";
+import { findOrderByPaymentId, getOrderByOrderId } from "@/lib/orders/store";
 import { getPaymentState } from "@/lib/tbank/client";
 import { isSuccessfulPaymentStatus } from "@/lib/tbank/types";
 
@@ -22,7 +22,11 @@ export async function GET(request: Request) {
       );
     }
 
-    const local = orderId ? getOrderByOrderId(orderId) : undefined;
+    const local = orderId
+      ? getOrderByOrderId(orderId)
+      : paymentIdParam
+        ? findOrderByPaymentId(paymentIdParam)
+        : undefined;
     const paymentId = paymentIdParam || local?.paymentId;
 
     if (!paymentId) {
@@ -42,7 +46,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       ok: true,
       paid,
-      orderId: state.OrderId ?? orderId ?? null,
+      orderId: state.OrderId ?? local?.orderId ?? orderId ?? null,
       paymentId: String(state.PaymentId ?? paymentId),
       status: state.Status ?? null,
       amountKopecks: state.Amount ?? local?.amountKopecks ?? null,
