@@ -128,8 +128,13 @@ export default function CartPage() {
             {formatPrice(total)}
           </span>
         </div>
-        <p className="mt-2 text-xs text-muted">
-          Оформление заказа будет доступно на следующем этапе.
+        <Link href="/checkout" className="mt-4 block">
+          <Button className="w-full" size="lg">
+            Оформить заказ
+          </Button>
+        </Link>
+        <p className="mt-3 text-center text-xs text-muted">
+          Далее — данные для связи и оплата через Т-Банк
         </p>
       </div>
     </div>
