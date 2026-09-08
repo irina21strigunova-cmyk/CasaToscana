@@ -4,7 +4,11 @@ import {
   createOrderId,
   type CheckoutCustomer,
 } from "@/lib/orders/calculate";
-import { savePendingOrder, updateOrderByOrderId } from "@/lib/orders/store";
+import {
+  rememberPaymentMapping,
+  savePendingOrder,
+  updateOrderByOrderId,
+} from "@/lib/orders/store";
 import { initPayment } from "@/lib/tbank/client";
 import type { CartItem } from "@/types/product";
 
@@ -81,6 +85,9 @@ export async function POST(request: Request) {
       paymentId,
       status: init.Status ?? "NEW",
     });
+    if (paymentId) {
+      rememberPaymentMapping(orderId, paymentId);
+    }
 
     return NextResponse.json({
       ok: true,

@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { CheckoutCustomer, OrderLine } from "@/lib/orders/calculate";
 import type { TbankPaymentStatus } from "@/lib/tbank/types";
 
@@ -73,4 +75,60 @@ export function findOrderByPaymentId(
     if (order.paymentId === paymentId) return order;
   }
   return undefined;
+}
+
+function paymentMapPath(): string {
+  const dir = process.env.VERCEL ? "/tmp" : join(process.cwd(), ".data");
+  return join(dir, "payment-map.json");
+}
+
+function readPaymentMapFile(): Record<string, string> {
+  try {
+    const path = paymentMapPath();
+    if (!existsSync(path)) return {};
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    const out: Record<string, string> = {};
+    for (const [orderId, paymentId] of Object.entries(
+      parsed as Record<string, unknown>
+    )) {
+      if (typeof paymentId === "string" && paymentId) {
+        out[orderId] = paymentId;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+function writePaymentMapFile(map: Record<string, string>): void {
+  try {
+    const path = paymentMapPath();
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, JSON.stringify(map), "utf8");
+  } catch {
+    // Best-effort on serverless; CheckOrder remains the durable lookup.
+  }
+}
+
+/** Persist orderId → PaymentId after Init so later GetState can resolve it. */
+export function rememberPaymentMapping(
+  orderId: string,
+  paymentId: string
+): void {
+  if (!orderId || !paymentId) return;
+  const current = getOrderByOrderId(orderId);
+  if (current) {
+    updateOrderByOrderId(orderId, { paymentId });
+  }
+  const map = readPaymentMapFile();
+  map[orderId] = paymentId;
+  writePaymentMapFile(map);
+}
+
+export function getPaymentIdByOrderId(orderId: string): string | undefined {
+  const local = getOrderByOrderId(orderId)?.paymentId;
+  if (local) return local;
+  return readPaymentMapFile()[orderId];
 }

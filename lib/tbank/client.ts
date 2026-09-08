@@ -1,5 +1,6 @@
 import { buildTbankToken } from "@/lib/tbank/token";
 import type {
+  TbankCheckOrderResponse,
   TbankGetStateResponse,
   TbankInitResponse,
 } from "@/lib/tbank/types";
@@ -148,4 +149,40 @@ export async function getPaymentState(
   }
 
   return (await response.json()) as TbankGetStateResponse;
+}
+
+export async function checkOrder(
+  orderId: string
+): Promise<TbankCheckOrderResponse> {
+  const { terminalKey, password, apiUrl } = getTbankConfig();
+
+  const body: Record<string, unknown> = {
+    TerminalKey: terminalKey,
+    OrderId: String(orderId),
+  };
+  body.Token = buildTbankToken(body, password);
+
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl}/v2/CheckOrder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (error) {
+    const diag = getSafeFetchErrorDiagnostics(error);
+    console.error("[tbank-checkorder-fetch]", diag);
+    const err = new Error(diag.message || "fetch failed") as Error & {
+      diagnostics?: typeof diag;
+    };
+    err.diagnostics = diag;
+    throw err;
+  }
+
+  if (!response.ok) {
+    throw new Error(`T-Bank CheckOrder HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as TbankCheckOrderResponse;
 }

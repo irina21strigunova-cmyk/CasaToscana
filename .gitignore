@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+!certs/russian-trusted-ca-bundle.pem
 
 # debug
 npm-debug.log*
@@ -33,6 +34,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+
+# local payment id map (never commit)
+.data/
 
 # vercel
 .vercel

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   findOrderByPaymentId,
   getOrderByOrderId,
+  rememberPaymentMapping,
   updateOrderByOrderId,
 } from "@/lib/orders/store";
 import { getTbankConfig } from "@/lib/tbank/client";
@@ -30,6 +31,10 @@ export async function POST(request: Request) {
       payload.PaymentId != null ? String(payload.PaymentId) : undefined;
     const status =
       typeof payload.Status === "string" ? payload.Status : undefined;
+
+    if (orderId && paymentId) {
+      rememberPaymentMapping(orderId, paymentId);
+    }
 
     const order =
       (orderId ? getOrderByOrderId(orderId) : undefined) ??
