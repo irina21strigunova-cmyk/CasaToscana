@@ -60,8 +60,8 @@ export async function POST(request: Request) {
       amountKopecks: order.amountKopecks,
       orderId,
       description: `Casa Toscana · заказ ${orderId}`,
-      customerEmail: customer.email,
-      customerPhone: customer.phone,
+      customer,
+      lines: order.lines,
     });
 
     if (!init.Success || !init.PaymentURL) {

@@ -1,6 +1,11 @@
+import type { CheckoutCustomer, OrderLine } from "@/lib/orders/calculate";
+import { buildInitReceipt, buildClosingReceipt } from "@/lib/tbank/receipt";
 import { buildTbankToken } from "@/lib/tbank/token";
+import { tbankFetch } from "@/lib/tbank/tls";
 import type {
+  TbankCancelResponse,
   TbankCheckOrderResponse,
+  TbankClosingReceiptResponse,
   TbankGetStateResponse,
   TbankInitResponse,
 } from "@/lib/tbank/types";
@@ -60,18 +65,72 @@ export function getSafeFetchErrorDiagnostics(error: unknown): {
   };
 }
 
+async function tbankPost<T>(
+  path: string,
+  payload: Record<string, unknown>,
+  logLabel: string
+): Promise<T> {
+  const { terminalKey, password, apiUrl } = getTbankConfig();
+  const body: Record<string, unknown> = {
+    ...payload,
+    TerminalKey: terminalKey,
+  };
+  body.Token = buildTbankToken(body, password);
+
+  let response: Response;
+  try {
+    response = await tbankFetch(`${apiUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    const diag = getSafeFetchErrorDiagnostics(error);
+    console.error(`[tbank-${logLabel}-fetch]`, diag);
+    const err = new Error(diag.message || "fetch failed") as Error & {
+      diagnostics?: typeof diag;
+    };
+    err.diagnostics = diag;
+    throw err;
+  }
+
+  if (!response.ok) {
+    throw new Error(`T-Bank ${logLabel} HTTP ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
 export async function initPayment(input: {
   amountKopecks: number;
   orderId: string;
   description: string;
-  customerEmail?: string;
-  customerPhone?: string;
+  customer: CheckoutCustomer;
+  lines: OrderLine[];
 }): Promise<TbankInitResponse> {
-  const { terminalKey, password, apiUrl } = getTbankConfig();
   const baseUrl = getAppBaseUrl();
+  const receipt = buildInitReceipt(
+    input.customer,
+    input.lines,
+    input.amountKopecks
+  );
 
-  const body: Record<string, unknown> = {
-    TerminalKey: terminalKey,
+  const data: Record<string, string> = {};
+  if (receipt.Email) data.Email = receipt.Email;
+  if (receipt.Phone) data.Phone = receipt.Phone;
+
+  console.info("[tbank-init-receipt]", {
+    orderId: input.orderId,
+    ffdVersion: receipt.FfdVersion,
+    taxation: receipt.Taxation,
+    itemCount: receipt.Items.length,
+    amountKopecks: input.amountKopecks,
+    hasEmail: Boolean(receipt.Email),
+    hasPhone: Boolean(receipt.Phone),
+    paymentMethod: receipt.Items[0]?.PaymentMethod ?? null,
+  });
+
+  const payload: Record<string, unknown> = {
     Amount: input.amountKopecks,
     OrderId: input.orderId,
     Description: input.description.slice(0, 140),
@@ -79,110 +138,78 @@ export async function initPayment(input: {
     SuccessURL: `${baseUrl}/payment/success?orderId=${encodeURIComponent(input.orderId)}`,
     FailURL: `${baseUrl}/payment/fail?orderId=${encodeURIComponent(input.orderId)}`,
     Language: "ru",
+    Receipt: receipt,
   };
-
-  const data: Record<string, string> = {};
-  if (input.customerEmail) data.Email = input.customerEmail;
-  if (input.customerPhone) data.Phone = input.customerPhone;
   if (Object.keys(data).length > 0) {
-    body.DATA = data;
+    payload.DATA = data;
   }
 
-  body.Token = buildTbankToken(body, password);
-
-  let response: Response;
-  try {
-    response = await fetch(`${apiUrl}/v2/Init`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-  } catch (error) {
-    const diag = getSafeFetchErrorDiagnostics(error);
-    console.error("[tbank-init-fetch]", diag);
-    const err = new Error(diag.message || "fetch failed") as Error & {
-      diagnostics?: typeof diag;
-    };
-    err.diagnostics = diag;
-    throw err;
-  }
-
-  if (!response.ok) {
-    throw new Error(`T-Bank Init HTTP ${response.status}`);
-  }
-
-  return (await response.json()) as TbankInitResponse;
+  return tbankPost<TbankInitResponse>("/v2/Init", payload, "init");
 }
 
 export async function getPaymentState(
   paymentId: string | number
 ): Promise<TbankGetStateResponse> {
-  const { terminalKey, password, apiUrl } = getTbankConfig();
-
-  const body: Record<string, unknown> = {
-    TerminalKey: terminalKey,
-    PaymentId: String(paymentId),
-  };
-  body.Token = buildTbankToken(body, password);
-
-  let response: Response;
-  try {
-    response = await fetch(`${apiUrl}/v2/GetState`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-  } catch (error) {
-    const diag = getSafeFetchErrorDiagnostics(error);
-    console.error("[tbank-getstate-fetch]", diag);
-    const err = new Error(diag.message || "fetch failed") as Error & {
-      diagnostics?: typeof diag;
-    };
-    err.diagnostics = diag;
-    throw err;
-  }
-
-  if (!response.ok) {
-    throw new Error(`T-Bank GetState HTTP ${response.status}`);
-  }
-
-  return (await response.json()) as TbankGetStateResponse;
+  return tbankPost<TbankGetStateResponse>(
+    "/v2/GetState",
+    { PaymentId: String(paymentId) },
+    "getstate"
+  );
 }
 
 export async function checkOrder(
   orderId: string
 ): Promise<TbankCheckOrderResponse> {
-  const { terminalKey, password, apiUrl } = getTbankConfig();
+  return tbankPost<TbankCheckOrderResponse>(
+    "/v2/CheckOrder",
+    { OrderId: String(orderId) },
+    "checkorder"
+  );
+}
 
-  const body: Record<string, unknown> = {
-    TerminalKey: terminalKey,
-    OrderId: String(orderId),
+/**
+ * Full cancel/refund. Per T-Bank, Receipt is omitted on a full cancel;
+ * the kassa builds the return cheque from the original Init receipt.
+ */
+export async function cancelPayment(input: {
+  paymentId: string | number;
+  amountKopecks?: number;
+}): Promise<TbankCancelResponse> {
+  const payload: Record<string, unknown> = {
+    PaymentId: String(input.paymentId),
   };
-  body.Token = buildTbankToken(body, password);
-
-  let response: Response;
-  try {
-    response = await fetch(`${apiUrl}/v2/CheckOrder`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
-  } catch (error) {
-    const diag = getSafeFetchErrorDiagnostics(error);
-    console.error("[tbank-checkorder-fetch]", diag);
-    const err = new Error(diag.message || "fetch failed") as Error & {
-      diagnostics?: typeof diag;
-    };
-    err.diagnostics = diag;
-    throw err;
+  if (input.amountKopecks != null) {
+    payload.Amount = input.amountKopecks;
   }
+  return tbankPost<TbankCancelResponse>("/v2/Cancel", payload, "cancel");
+}
 
-  if (!response.ok) {
-    throw new Error(`T-Bank CheckOrder HTTP ${response.status}`);
-  }
+export async function sendClosingReceipt(input: {
+  paymentId: string | number;
+  customer: CheckoutCustomer;
+  lines: OrderLine[];
+  amountKopecks: number;
+}): Promise<TbankClosingReceiptResponse> {
+  const receipt = buildClosingReceipt(
+    input.customer,
+    input.lines,
+    input.amountKopecks
+  );
 
-  return (await response.json()) as TbankCheckOrderResponse;
+  console.info("[tbank-closing-receipt]", {
+    paymentId: String(input.paymentId),
+    ffdVersion: receipt.FfdVersion,
+    itemCount: receipt.Items.length,
+    amountKopecks: input.amountKopecks,
+    paymentMethod: receipt.Items[0]?.PaymentMethod ?? null,
+  });
+
+  return tbankPost<TbankClosingReceiptResponse>(
+    "/cashbox/SendClosingReceipt",
+    {
+      PaymentId: String(input.paymentId),
+      Receipt: receipt,
+    },
+    "closing-receipt"
+  );
 }

@@ -63,6 +63,27 @@ export interface TbankCheckOrderResponse {
   Payments?: TbankCheckOrderPayment[];
 }
 
+export interface TbankCancelResponse {
+  Success: boolean;
+  ErrorCode: string;
+  Message?: string;
+  Details?: string;
+  TerminalKey?: string;
+  Status?: TbankPaymentStatus;
+  PaymentId?: string | number;
+  OrderId?: string;
+  Amount?: number;
+  OriginalAmount?: number;
+  NewAmount?: number;
+}
+
+export interface TbankClosingReceiptResponse {
+  Success: boolean;
+  ErrorCode: string;
+  Message?: string;
+  Details?: string;
+}
+
 export type PaymentOutcome = "paid" | "failed" | "refunded" | "pending";
 
 export function isSuccessfulPaymentStatus(

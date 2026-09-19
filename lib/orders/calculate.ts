@@ -1,5 +1,5 @@
 import { getProductById } from "@/lib/products";
-import type { CartItem } from "@/types/product";
+import type { CartItem, ProductMarkCode } from "@/types/product";
 
 export interface CheckoutCustomer {
   name: string;
@@ -14,6 +14,9 @@ export interface OrderLine {
   quantity: number;
   unitPriceRub: number;
   lineTotalRub: number;
+  requiresMarking?: boolean;
+  /** Real scanned code only; omitted until shipment. */
+  markCode?: ProductMarkCode;
 }
 
 export interface CalculatedOrder {
@@ -54,6 +57,7 @@ export function calculateOrderFromCartItems(
       quantity,
       unitPriceRub,
       lineTotalRub: unitPriceRub * quantity,
+      requiresMarking: product.requiresMarking === true,
     });
   }
 

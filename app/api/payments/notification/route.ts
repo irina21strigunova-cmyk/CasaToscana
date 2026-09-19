@@ -7,7 +7,10 @@ import {
 } from "@/lib/orders/store";
 import { getTbankConfig } from "@/lib/tbank/client";
 import { verifyTbankToken } from "@/lib/tbank/token";
-import { isSuccessfulPaymentStatus } from "@/lib/tbank/types";
+import {
+  isRefundedPaymentStatus,
+  isSuccessfulPaymentStatus,
+} from "@/lib/tbank/types";
 
 export const runtime = "nodejs";
 
@@ -42,10 +45,14 @@ export async function POST(request: Request) {
 
     if (order) {
       const paid = isSuccessfulPaymentStatus(status);
+      const refunded = isRefundedPaymentStatus(status);
       updateOrderByOrderId(order.orderId, {
         paymentId: paymentId ?? order.paymentId,
-        status: paid ? "PAID" : status || order.status,
+        status: paid ? "PAID" : refunded ? "REFUNDED" : status || order.status,
         paidAt: paid ? new Date().toISOString() : order.paidAt,
+        refundedAt: refunded
+          ? new Date().toISOString()
+          : order.refundedAt,
       });
     }
 

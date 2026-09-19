@@ -14,10 +14,14 @@ export interface PendingOrderRecord {
   createdAt: string;
   updatedAt: string;
   paidAt?: string;
+  shippedAt?: string;
+  closingReceiptSentAt?: string;
+  refundedAt?: string;
 }
 
 /**
- * In-memory order registry for payment flow.
+ * In-memory order registry for payment flow, with a best-effort snapshot
+ * on disk so refund / closing-receipt can still resolve the original lines.
  * Source of truth for payment success remains T-Bank GetState / Notification.
  */
 const globalStore = globalThis as typeof globalThis & {
@@ -29,6 +33,75 @@ function ordersMap(): Map<string, PendingOrderRecord> {
     globalStore.__casaToscanaOrders = new Map();
   }
   return globalStore.__casaToscanaOrders;
+}
+
+function dataDir(): string {
+  return process.env.VERCEL ? "/tmp" : join(process.cwd(), ".data");
+}
+
+function paymentMapPath(): string {
+  return join(dataDir(), "payment-map.json");
+}
+
+function ordersFilePath(): string {
+  return join(dataDir(), "orders.json");
+}
+
+function readJsonObject(path: string): Record<string, unknown> {
+  try {
+    if (!existsSync(path)) return {};
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function writeJsonObject(path: string, value: unknown): void {
+  try {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, JSON.stringify(value), "utf8");
+  } catch {
+    // Best-effort on serverless; CheckOrder remains the durable lookup.
+  }
+}
+
+function isOrderRecord(value: unknown): value is PendingOrderRecord {
+  if (!value || typeof value !== "object") return false;
+  const record = value as PendingOrderRecord;
+  return (
+    typeof record.orderId === "string" &&
+    typeof record.amountKopecks === "number" &&
+    Array.isArray(record.lines) &&
+    Boolean(record.customer)
+  );
+}
+
+function readOrdersFile(): Record<string, PendingOrderRecord> {
+  const parsed = readJsonObject(ordersFilePath());
+  const out: Record<string, PendingOrderRecord> = {};
+  for (const [orderId, value] of Object.entries(parsed)) {
+    if (isOrderRecord(value)) out[orderId] = value;
+  }
+  return out;
+}
+
+function persistOrder(order: PendingOrderRecord): void {
+  const all = readOrdersFile();
+  all[order.orderId] = order;
+  writeJsonObject(ordersFilePath(), all);
+}
+
+function hydrateOrder(orderId: string): PendingOrderRecord | undefined {
+  const mem = ordersMap().get(orderId);
+  if (mem) return mem;
+  const fromFile = readOrdersFile()[orderId];
+  if (fromFile) {
+    ordersMap().set(orderId, fromFile);
+    return fromFile;
+  }
+  return undefined;
 }
 
 export function savePendingOrder(
@@ -44,6 +117,7 @@ export function savePendingOrder(
     updatedAt: now,
   };
   ordersMap().set(full.orderId, full);
+  persistOrder(full);
   return full;
 }
 
@@ -51,7 +125,7 @@ export function updateOrderByOrderId(
   orderId: string,
   patch: Partial<PendingOrderRecord>
 ): PendingOrderRecord | undefined {
-  const current = ordersMap().get(orderId);
+  const current = hydrateOrder(orderId);
   if (!current) return undefined;
   const next = {
     ...current,
@@ -59,13 +133,14 @@ export function updateOrderByOrderId(
     updatedAt: new Date().toISOString(),
   };
   ordersMap().set(orderId, next);
+  persistOrder(next);
   return next;
 }
 
 export function getOrderByOrderId(
   orderId: string
 ): PendingOrderRecord | undefined {
-  return ordersMap().get(orderId);
+  return hydrateOrder(orderId);
 }
 
 export function findOrderByPaymentId(
@@ -74,42 +149,28 @@ export function findOrderByPaymentId(
   for (const order of ordersMap().values()) {
     if (order.paymentId === paymentId) return order;
   }
+  for (const order of Object.values(readOrdersFile())) {
+    if (order.paymentId === paymentId) {
+      ordersMap().set(order.orderId, order);
+      return order;
+    }
+  }
   return undefined;
 }
 
-function paymentMapPath(): string {
-  const dir = process.env.VERCEL ? "/tmp" : join(process.cwd(), ".data");
-  return join(dir, "payment-map.json");
-}
-
 function readPaymentMapFile(): Record<string, string> {
-  try {
-    const path = paymentMapPath();
-    if (!existsSync(path)) return {};
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
-    if (!parsed || typeof parsed !== "object") return {};
-    const out: Record<string, string> = {};
-    for (const [orderId, paymentId] of Object.entries(
-      parsed as Record<string, unknown>
-    )) {
-      if (typeof paymentId === "string" && paymentId) {
-        out[orderId] = paymentId;
-      }
+  const parsed = readJsonObject(paymentMapPath());
+  const out: Record<string, string> = {};
+  for (const [orderId, paymentId] of Object.entries(parsed)) {
+    if (typeof paymentId === "string" && paymentId) {
+      out[orderId] = paymentId;
     }
-    return out;
-  } catch {
-    return {};
   }
+  return out;
 }
 
 function writePaymentMapFile(map: Record<string, string>): void {
-  try {
-    const path = paymentMapPath();
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, JSON.stringify(map), "utf8");
-  } catch {
-    // Best-effort on serverless; CheckOrder remains the durable lookup.
-  }
+  writeJsonObject(paymentMapPath(), map);
 }
 
 /** Persist orderId → PaymentId after Init so later GetState can resolve it. */
