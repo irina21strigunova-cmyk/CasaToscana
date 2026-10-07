@@ -1,20 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/product/ProductCard";
 import { getCategories, getProducts } from "@/lib/products";
 import { cn } from "@/lib/utils";
 
 export function CatalogContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const products = getProducts();
   const categories = getCategories();
   const requestedCategory = searchParams.get("category");
-  const activeCategory =
-    categories.find((cat) => cat.slug === requestedCategory)?.slug ??
-    categories[0]?.slug;
+  const knownCategory = categories.find(
+    (cat) => cat.slug === requestedCategory
+  )?.slug;
+
+  useEffect(() => {
+    if (requestedCategory && !knownCategory) {
+      router.replace("/catalog");
+    }
+  }, [requestedCategory, knownCategory, router]);
+
+  const activeCategory = knownCategory ?? categories[0]?.slug;
 
   const filtered = useMemo(() => {
     if (!activeCategory) return products;

@@ -11,7 +11,6 @@ export const catalogCategories: CatalogCategory[] = [
   { slug: "bio-le-veneri", name: "Линия Bio Le Veneri" },
   { slug: "home", name: "Косметика для дома" },
   { slug: "car-fragrance", name: "Аромадиффузоры для авто" },
-  { slug: "scented-paper", name: "Парфюмированная бумага" },
   { slug: "gift-sets", name: "Подарочный набор" },
 ];
 
@@ -98,20 +97,10 @@ export const boutiqueCategories: BoutiqueCategory[] = [
     layout: "tall",
   },
   {
-    slug: "scented-paper",
-    name: "Парфюмированная бумага",
-    subtitle: "Тонкий аромат для пространства",
-    collection: "07",
-    image: "/categories/Парфюмированная бумага.jpg",
-    imagePosition: "center 40%",
-    overlay: "rgba(170, 140, 120, 0.12)",
-    layout: "wide",
-  },
-  {
     slug: "gift-sets",
     name: "Подарочный набор",
     subtitle: "Готовые комплекты в подарок",
-    collection: "08",
+    collection: "07",
     image: "/categories/Подарочный набор.jpg",
     imagePosition: "center 42%",
     overlay: "rgba(180, 150, 120, 0.12)",
