@@ -6,8 +6,8 @@ export const seller = {
   ogrnip: "326265100106381",
   registeredAt: "17.07.2026",
   registeredAtLong: "17 июля 2026 года",
-  siteUrl: "https://casa-toscana-omega.vercel.app",
-  siteHost: "casa-toscana-omega.vercel.app",
+  siteUrl: "https://casatoscana.ru/",
+  siteHost: "casatoscana.ru",
   documentsUpdatedAt: "07.10.2026",
   email: "CasaToscana@outlook.com",
   /**
