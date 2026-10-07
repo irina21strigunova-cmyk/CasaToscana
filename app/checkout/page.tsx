@@ -18,6 +18,7 @@ export default function CheckoutPage() {
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const cartLines = useMemo(
     () =>
@@ -39,6 +40,12 @@ export default function CheckoutPage() {
 
   async function handlePay() {
     setError(null);
+    if (!acceptedTerms) {
+      setError(
+        "Чтобы оформить заказ, подтвердите согласие с офертой и обработкой персональных данных."
+      );
+      return;
+    }
     setLoading(true);
     try {
       const response = await fetch("/api/payments/create", {
@@ -193,10 +200,38 @@ export default function CheckoutPage() {
         </p>
       ) : null}
 
+      <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-2xl bg-cream px-4 py-3">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(event) => setAcceptedTerms(event.target.checked)}
+          className="mt-1 h-4 w-4 shrink-0 accent-olive"
+        />
+        <span className="text-[13px] font-light leading-relaxed text-foreground/85">
+          Оформляя заказ, я принимаю условия{" "}
+          <Link
+            href="/offer"
+            className="underline underline-offset-2 hover:text-olive"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Публичной оферты
+          </Link>{" "}
+          и даю согласие на обработку персональных данных в соответствии с{" "}
+          <Link
+            href="/privacy"
+            className="underline underline-offset-2 hover:text-olive"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Политикой конфиденциальности
+          </Link>
+          .
+        </span>
+      </label>
+
       <Button
-        className="mt-6 w-full"
+        className="mt-4 w-full"
         size="lg"
-        disabled={loading}
+        disabled={loading || !acceptedTerms}
         onClick={handlePay}
       >
         {loading ? "Создаём платёж…" : "Оплатить"}
