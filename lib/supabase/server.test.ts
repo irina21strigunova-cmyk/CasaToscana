@@ -2,6 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { describeSupabaseError, isSupabaseConfigured } from "./server";
 
+test("rest path is stripped to project origin", async () => {
+  const previousUrl = process.env.SUPABASE_URL;
+  const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.SUPABASE_URL = "https://abcd1234.supabase.co/rest/v1";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role";
+  try {
+    assert.equal(isSupabaseConfigured(), true);
+  } finally {
+    process.env.SUPABASE_URL = previousUrl;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = previousKey;
+  }
+});
+
 test("dashboard URL is not a durable store", () => {
   const previousUrl = process.env.SUPABASE_URL;
   const previousKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

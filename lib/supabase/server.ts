@@ -1,16 +1,17 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 function normalizeSupabaseUrl(raw: string): string {
-  const url = raw.trim().replace(/\/+$/, "");
+  const parsed = new URL(raw.trim());
   if (
-    /supabase\.com\/dashboard/i.test(url) ||
-    /\/dashboard(\/|$)/i.test(url)
+    /supabase\.com\/dashboard/i.test(parsed.href) ||
+    /\/dashboard(\/|$)/i.test(parsed.pathname)
   ) {
     throw new Error(
       "SUPABASE_URL должен быть Project URL вида https://xxxxx.supabase.co из Settings → API, не адрес кабинета Supabase."
     );
   }
-  return url;
+  // supabase-js already appends /rest/v1; keep origin only.
+  return parsed.origin;
 }
 
 export function isSupabaseConfigured(): boolean {
