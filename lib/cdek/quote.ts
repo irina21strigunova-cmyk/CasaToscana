@@ -2,7 +2,7 @@ import {
   calculateCdekTariffs,
   listCdekOffices,
 } from "@/lib/cdek/client";
-import { CDEK_STAVROPOL_CODE, isStavropolCity } from "@/lib/cdek/config";
+import { CDEK_MOSCOW_CODE, CDEK_STAVROPOL_CODE, isStavropolCity } from "@/lib/cdek/config";
 import {
   buildCdekPackages,
   isCdekCatalogWeightMissingError,
@@ -83,8 +83,13 @@ export async function quoteDelivery(
 ): Promise<DeliveryQuoteResult> {
   const cityName = input.cityName?.trim() ?? "";
   if (input.type === "yandex_courier") {
-    if (input.cityCode !== CDEK_STAVROPOL_CODE) {
-      throw new Error("Яндекс Доставка доступна только по городу Ставрополю");
+    const yandexCityName = input.cityCode === CDEK_MOSCOW_CODE
+      ? "Москва"
+      : input.cityCode === CDEK_STAVROPOL_CODE
+        ? "Ставрополь"
+        : null;
+    if (!yandexCityName) {
+      throw new Error("Яндекс Доставка доступна только по Москве и Ставрополю");
     }
     const address = input.address?.trim() ?? "";
     if (address.length < 8) {
@@ -93,8 +98,8 @@ export async function quoteDelivery(
     return {
       delivery: {
         type: "yandex_courier",
-        cityCode: CDEK_STAVROPOL_CODE,
-        cityName: "Ставрополь",
+        cityCode: input.cityCode,
+        cityName: yandexCityName,
         address,
         costRub: 0,
         awaitingQuote: true,

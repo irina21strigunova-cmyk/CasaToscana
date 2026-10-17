@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CDEK_STAVROPOL_CODE, isStavropolCity } from "./config";
+import { CDEK_MOSCOW_CODE, CDEK_STAVROPOL_CODE, isStavropolCity } from "./config";
 import { parseDeliveryType, quoteDelivery } from "./quote";
 
 test("Stavropol is detected by name and is not a CDEK-priced type", () => {
@@ -31,7 +31,24 @@ test("Yandex delivery keeps the address and awaits an agreed price without calli
   assert.deepEqual(quote.tariffs, []);
 });
 
-test("Yandex delivery rejects a missing address and cities outside Stavropol", async () => {
+test("Yandex delivery in Moscow keeps its city and awaits an agreed price", async () => {
+  const quote = await quoteDelivery({
+    type: "yandex_courier",
+    cityCode: CDEK_MOSCOW_CODE,
+    cityName: "Москва",
+    address: "  ул. Тверская, 7  ",
+    items: [{ productId: "430041", quantity: 1 }],
+  });
+  assert.equal(quote.delivery.type, "yandex_courier");
+  assert.equal(quote.delivery.cityCode, CDEK_MOSCOW_CODE);
+  assert.equal(quote.delivery.cityName, "Москва");
+  assert.equal(quote.delivery.address, "ул. Тверская, 7");
+  assert.equal(quote.delivery.awaitingQuote, true);
+  assert.equal(quote.delivery.costRub, 0);
+  assert.deepEqual(quote.tariffs, []);
+});
+
+test("Yandex delivery rejects a missing address and cities outside Moscow and Stavropol", async () => {
   const input = {
     type: "yandex_courier" as const,
     cityCode: CDEK_STAVROPOL_CODE,
@@ -39,8 +56,9 @@ test("Yandex delivery rejects a missing address and cities outside Stavropol", a
     items: [{ productId: "430041", quantity: 1 }],
   };
   await assert.rejects(quoteDelivery(input), /Укажите улицу/);
+  await assert.rejects(quoteDelivery({ ...input, cityCode: CDEK_MOSCOW_CODE }), /Укажите улицу/);
   await assert.rejects(
-    quoteDelivery({ ...input, cityCode: 44, address: "ул. Ленина, 1" }),
-    /только по городу Ставрополю/
+    quoteDelivery({ ...input, cityCode: 999, cityName: "Москва", address: "ул. Ленина, 1" }),
+    /только по Москве и Ставрополю/
   );
 });

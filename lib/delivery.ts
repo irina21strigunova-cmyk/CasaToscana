@@ -5,7 +5,7 @@ export function deliveryTypeLabel(type: string): string {
     case "courier":
       return "СДЭК — курьер";
     case "yandex_courier":
-      return "Яндекс Доставка — курьером по Ставрополю";
+      return "Яндекс Доставка — курьер";
     case "stavropol_local":
       return "Местная доставка по Ставрополю";
     default:
