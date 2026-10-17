@@ -1,7 +1,6 @@
 /** Official CDEK location code for Moscow — used as shipment origin city. */
 export const CDEK_MOSCOW_CODE = 44;
-
-const STAVROPOL_NAME = /ставропол/i;
+export const CDEK_STAVROPOL_CODE = 439;
 
 export function getCdekApiBaseUrl(): string {
   return (
@@ -17,8 +16,10 @@ export function getCdekFromLocation(): { code: number; address?: string } {
 }
 
 export function isStavropolCity(input: {
+  code?: number;
   name?: string | null;
   region?: string | null;
 }): boolean {
-  return STAVROPOL_NAME.test(input.name ?? "") || STAVROPOL_NAME.test(input.region ?? "");
+  if (input.code != null) return input.code === CDEK_STAVROPOL_CODE;
+  return (input.name ?? "").trim().toLowerCase().replace(/^г[.\s]+/, "") === "ставрополь";
 }

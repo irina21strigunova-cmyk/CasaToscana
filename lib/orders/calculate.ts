@@ -1,4 +1,5 @@
 import type { DeliverySelection } from "@/lib/cdek/types";
+import { isDeliveryLineProductId } from "@/lib/delivery";
 import { getProductById } from "@/lib/products";
 import type { CartItem, ProductMarkCode } from "@/types/product";
 
@@ -73,7 +74,7 @@ export function attachDeliveryLine(
   goodsLines: OrderLine[],
   delivery: DeliverySelection | null = null
 ): CalculatedOrder {
-  const lines = goodsLines.filter((line) => line.productId !== "delivery-cdek");
+  const lines = goodsLines.filter((line) => !isDeliveryLineProductId(line.productId));
   if (lines.length === 0) {
     throw new Error("В заказе нет товаров");
   }
@@ -86,8 +87,8 @@ export function attachDeliveryLine(
 
   if (deliveryRub > 0 && delivery) {
     lines.push({
-      productId: "delivery-cdek",
-      name: `Доставка СДЭК${delivery.tariffName ? ` · ${delivery.tariffName}` : ""}`.slice(
+      productId: delivery.type === "yandex_courier" ? "delivery-yandex" : "delivery-cdek",
+      name: `${delivery.type === "yandex_courier" ? "Яндекс Доставка" : "Доставка СДЭК"}${delivery.tariffName ? ` · ${delivery.tariffName}` : ""}`.slice(
         0,
         128
       ),

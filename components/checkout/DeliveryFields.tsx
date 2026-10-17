@@ -118,19 +118,23 @@ export function DeliveryFields({
     setQuote(null);
     onChangeRef.current(null);
     setLoading(false);
+    setError(null);
     if (!city) {
       return;
     }
 
     const deliveryType: CdekDeliveryType = city.stavropolLocal
-      ? "stavropol_local"
+      ? "yandex_courier"
       : type;
     if (deliveryType === "pvz" && !officeCode) {
       setQuote(null);
       onChangeRef.current(null);
       return;
     }
-    if (deliveryType === "courier" && address.trim().length < 8) {
+    if (
+      (deliveryType === "courier" || deliveryType === "yandex_courier") &&
+      address.trim().length < 8
+    ) {
       setQuote(null);
       onChangeRef.current(null);
       return;
@@ -153,7 +157,10 @@ export function DeliveryFields({
               cityName: city.name,
               cityRegion: city.region,
               officeCode: deliveryType === "pvz" ? officeCode : undefined,
-              address: deliveryType === "courier" ? address : undefined,
+              address:
+                deliveryType === "courier" || deliveryType === "yandex_courier"
+                  ? address
+                  : undefined,
               items,
             }),
           });
@@ -211,6 +218,7 @@ export function DeliveryFields({
           onChange={(event) => {
             setCity(null);
             setOfficeCode("");
+            setAddress("");
             setQuote(null);
             setQuery(event.target.value);
           }}
@@ -232,8 +240,9 @@ export function DeliveryFields({
                   setQuery("");
                   setCities([]);
                   setOfficeCode("");
-                  if (item.stavropolLocal) setType("stavropol_local");
-                  else if (type === "stavropol_local") setType("pvz");
+                  setAddress("");
+                  if (item.stavropolLocal) setType("yandex_courier");
+                  else if (type === "stavropol_local" || type === "yandex_courier") setType("pvz");
                 }}
               >
                 {item.name}
@@ -276,10 +285,13 @@ export function DeliveryFields({
       ) : null}
 
       {city?.stavropolLocal ? (
-        <p className="mt-3 text-sm leading-relaxed text-muted">
-          Доставка по Ставрополю согласовывается отдельно и в этом заказе не
-          добавляется к сумме СДЭК. В оплату входят только товары.
-        </p>
+        <div className="mt-3 rounded-2xl border border-olive/30 bg-milk px-4 py-3">
+          <p className="text-sm font-medium text-foreground">Яндекс Доставка</p>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            Курьером по Ставрополю. Укажите адрес получателя. Стоимость и время
+            доставки согласуем перед оплатой заказа.
+          </p>
+        </div>
       ) : null}
 
       {city && type === "pvz" && !city.stavropolLocal ? (
@@ -287,7 +299,7 @@ export function DeliveryFields({
           value={officeCode} loading={officesLoading} onChange={setOfficeCode} />
       ) : null}
 
-      {city && type === "courier" && !city.stavropolLocal ? (
+      {city && (type === "courier" || type === "yandex_courier") ? (
         <label className="mt-3 block">
           <span className="mb-1.5 block text-xs font-medium uppercase tracking-[0.14em] text-muted">
             Адрес доставки
@@ -297,12 +309,16 @@ export function DeliveryFields({
             onChange={(event) => setAddress(event.target.value)}
             className="min-h-[5rem] w-full resize-none rounded-2xl border border-foreground/10 bg-milk px-4 py-3 text-sm outline-none focus:border-olive/40"
             placeholder="Улица, дом, квартира"
+            autoComplete="street-address"
+            required
           />
         </label>
       ) : null}
 
       {loading ? (
-        <p className="mt-3 text-sm text-muted">Считаем доставку через СДЭК…</p>
+        <p className="mt-3 text-sm text-muted">
+          {city?.stavropolLocal ? "Проверяем адрес доставки…" : "Считаем доставку через СДЭК…"}
+        </p>
       ) : null}
       {error ? (
         <p className="mt-3 text-sm text-terracotta-dark">{error}</p>

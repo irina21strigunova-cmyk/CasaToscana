@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createMemoryOrderStore } from "./memory-store";
+import { publicOrderView } from "./types";
 
 function sampleOrder(id: string) {
   return {
@@ -50,6 +51,29 @@ test("lookup requires matching email", async () => {
   const denied = await store.getOrderByOrderIdAndEmail("CT-MAIL-1", "other@example.com");
   assert.ok(ok);
   assert.equal(denied, undefined);
+});
+
+test("Yandex method, address and pending price survive saving and customer lookup", async () => {
+  const store = createMemoryOrderStore();
+  await store.savePendingOrder({
+    ...sampleOrder("CT-YANDEX-1"),
+    delivery: {
+      type: "yandex_courier",
+      cityCode: 439,
+      cityName: "Ставрополь",
+      address: "ул. Ленина, 1, кв. 2",
+      costRub: 0,
+      awaitingQuote: true,
+    },
+  });
+  const saved = await store.getOrderByOrderIdAndEmail("CT-YANDEX-1", "buyer@example.com");
+  assert.ok(saved);
+  const view = publicOrderView(saved);
+  assert.equal(view.delivery?.type, "yandex_courier");
+  assert.equal(view.delivery?.address, "ул. Ленина, 1, кв. 2");
+  assert.equal(view.delivery?.awaitingQuote, true);
+  assert.equal(view.status, "AWAITING_DELIVERY_QUOTE");
+  assert.equal(view.paymentUrl, null);
 });
 
 test("parallel payment claims allow only one creator", async () => {

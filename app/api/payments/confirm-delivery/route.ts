@@ -17,7 +17,7 @@ interface ConfirmDeliveryBody {
 }
 
 /**
- * Ops-only: set a confirmed CDEK delivery price on an unpaid order
+ * Ops-only: set a confirmed CDEK or Yandex delivery price on an unpaid order
  * and create a T-Bank payment link (goods + delivery).
  */
 export async function POST(request: Request) {
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       await releasePaymentClaim(orderId);
       claimedOrderId = null;
       return NextResponse.json(
-        { ok: false, error: "У заказа нет доставки, ожидающей расчёта СДЭК" },
+        { ok: false, error: "У заказа нет доставки, ожидающей расчёта" },
         { status: 409 }
       );
     }

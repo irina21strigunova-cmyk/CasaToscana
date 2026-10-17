@@ -1,4 +1,5 @@
 import { seller } from "@/data/seller";
+import { deliveryTypeLabel } from "@/lib/delivery";
 import { getAppBaseUrl } from "@/lib/tbank/client";
 import {
   orderStatusLabel,
@@ -60,7 +61,7 @@ function deliveryHtml(order: PendingOrderRecord): string {
   const delivery = order.delivery;
   if (!delivery) return "<p>Доставка не указана.</p>";
   const parts = [
-    `Способ: ${escapeHtml(delivery.type)}`,
+    `Способ: ${escapeHtml(deliveryTypeLabel(delivery.type))}`,
     delivery.cityName ? `Город: ${escapeHtml(delivery.cityName)}` : "",
     delivery.officeAddress
       ? `ПВЗ: ${escapeHtml(delivery.officeAddress)}`

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildAdminNewOrderEmail,
+  buildBuyerOrderEmail,
   buildBuyerPaymentLinkEmail,
   isEmailConfigured,
 } from "./send";
@@ -51,4 +52,24 @@ test("admin and buyer templates include the order id; email is not faked as sent
   assert.match(pay.html, /securepay.tinkoff.ru\/example/);
   delete process.env.RESEND_API_KEY;
   assert.equal(isEmailConfigured(), false);
+});
+
+test("Yandex order emails show the carrier, address and pending delivery cost", () => {
+  const yandexOrder: PendingOrderRecord = {
+    ...order,
+    delivery: {
+      type: "yandex_courier",
+      cityCode: 439,
+      cityName: "Ставрополь",
+      address: "ул. Ленина, 1, кв. 2",
+      costRub: 0,
+      awaitingQuote: true,
+    },
+  };
+  for (const mail of [buildAdminNewOrderEmail(yandexOrder), buildBuyerOrderEmail(yandexOrder)]) {
+    assert.match(mail.html, /Яндекс Доставка/);
+    assert.match(mail.html, /ул\. Ленина, 1, кв\. 2/);
+    assert.match(mail.html, /Стоимость доставки будет рассчитана после оформления заказа/);
+    assert.doesNotMatch(mail.html, /yandex_courier/);
+  }
 });

@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/products";
+import { deliveryTypeLabel } from "@/lib/delivery";
 
 interface PublicOrder {
   orderId: string;
@@ -113,6 +114,7 @@ export function OrdersLookup() {
           </ul>
           {order.delivery ? (
             <p className="mt-3 text-muted">
+              {deliveryTypeLabel(order.delivery.type)} · {" "}
               {order.delivery.cityName}
               {order.delivery.officeAddress
                 ? ` · ${order.delivery.officeAddress}`
@@ -122,7 +124,7 @@ export function OrdersLookup() {
             </p>
           ) : null}
           <p className="mt-3">Товары: {formatPrice(order.goodsRub)}</p>
-          <p>Доставка: {formatPrice(order.deliveryCostRub)}</p>
+          <p>Доставка: {order.delivery?.awaitingQuote ? "после согласования" : formatPrice(order.deliveryCostRub)}</p>
           <p className="font-medium">Итого: {formatPrice(order.totalRub)}</p>
           {order.paymentUrl ? (
             <a href={order.paymentUrl} className="mt-4 inline-block">

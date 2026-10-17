@@ -51,8 +51,8 @@ function normalizeCustomer(
 }
 
 /**
- * Save an unpaid order when CDEK cannot quote because catalog weights
- * are missing. Requires durable Supabase storage. Does not call T-Bank Init.
+ * Save an unpaid order when CDEK weights are missing or a local Yandex
+ * delivery needs a confirmed price. Does not call T-Bank Init.
  */
 export async function POST(request: Request) {
   try {
