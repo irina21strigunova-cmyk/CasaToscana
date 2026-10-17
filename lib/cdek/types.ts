@@ -1,4 +1,8 @@
-export type CdekDeliveryType = "pvz" | "courier" | "stavropol_local";
+export type CdekDeliveryType =
+  | "pvz"
+  | "courier"
+  | "stavropol_local"
+  | "yandex_courier";
 
 export interface CdekCity {
   code: number;

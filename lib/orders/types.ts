@@ -1,4 +1,5 @@
 import type { DeliverySelection } from "@/lib/cdek/types";
+import { isDeliveryLineProductId } from "@/lib/delivery";
 import type { CheckoutCustomer, OrderLine } from "@/lib/orders/calculate";
 import type { TbankPaymentStatus } from "@/lib/tbank/types";
 
@@ -76,7 +77,7 @@ export interface OrderStore {
 
 export function goodsRubFromLines(lines: OrderLine[]): number {
   return lines
-    .filter((line) => line.productId !== "delivery-cdek")
+    .filter((line) => !isDeliveryLineProductId(line.productId))
     .reduce((sum, line) => sum + line.lineTotalRub, 0);
 }
 
@@ -87,7 +88,7 @@ export function deliveryCostFromRecord(
     return Math.round(order.delivery.costRub * 100) / 100;
   }
   const deliveryLine = order.lines.find(
-    (line) => line.productId === "delivery-cdek"
+    (line) => isDeliveryLineProductId(line.productId)
   );
   return deliveryLine ? deliveryLine.lineTotalRub : 0;
 }

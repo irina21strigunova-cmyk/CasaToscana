@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { formatPrice } from "@/lib/products";
+import { deliveryTypeLabel } from "@/lib/delivery";
 
 interface AdminOrder {
   orderId: string;
@@ -213,7 +214,7 @@ export default function AdminOrdersPage() {
           {selected.delivery ? (
             <div className="mt-4 text-muted">
               <p>Город: {selected.delivery.cityName}</p>
-              <p>Способ: {selected.delivery.type}</p>
+              <p>Способ: {deliveryTypeLabel(selected.delivery.type)}</p>
               {selected.delivery.officeAddress ? (
                 <p>ПВЗ: {selected.delivery.officeAddress}</p>
               ) : null}
@@ -224,7 +225,7 @@ export default function AdminOrdersPage() {
           ) : null}
 
           <p className="mt-4">Товары: {formatPrice(selected.goodsRub)}</p>
-          <p>Доставка: {formatPrice(selected.deliveryCostRub)}</p>
+          <p>Доставка: {selected.delivery?.awaitingQuote ? "после согласования" : formatPrice(selected.deliveryCostRub)}</p>
           <p className="font-medium">Итого: {formatPrice(selected.totalRub)}</p>
           {selected.paymentId ? (
             <p className="mt-2 text-muted">PaymentId: {selected.paymentId}</p>

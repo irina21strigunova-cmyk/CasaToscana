@@ -2,7 +2,7 @@ import {
   calculateCdekTariffs,
   listCdekOffices,
 } from "@/lib/cdek/client";
-import { isStavropolCity } from "@/lib/cdek/config";
+import { CDEK_STAVROPOL_CODE, isStavropolCity } from "@/lib/cdek/config";
 import {
   buildCdekPackages,
   isCdekCatalogWeightMissingError,
@@ -27,7 +27,10 @@ export interface DeliveryQuoteInput {
 export function parseDeliveryType(
   value: unknown
 ): CdekDeliveryType | null {
-  if (value === "pvz" || value === "courier" || value === "stavropol_local") {
+  if (
+    value === "pvz" || value === "courier" ||
+    value === "stavropol_local" || value === "yandex_courier"
+  ) {
     return value;
   }
   return null;
@@ -79,7 +82,31 @@ export async function quoteDelivery(
   input: DeliveryQuoteInput
 ): Promise<DeliveryQuoteResult> {
   const cityName = input.cityName?.trim() ?? "";
-  if (input.type === "stavropol_local" || isStavropolCity({ name: cityName, region: input.cityRegion })) {
+  if (input.type === "yandex_courier") {
+    if (input.cityCode !== CDEK_STAVROPOL_CODE) {
+      throw new Error("Яндекс Доставка доступна только по городу Ставрополю");
+    }
+    const address = input.address?.trim() ?? "";
+    if (address.length < 8) {
+      throw new Error("Укажите улицу, дом и квартиру для Яндекс Доставки");
+    }
+    return {
+      delivery: {
+        type: "yandex_courier",
+        cityCode: CDEK_STAVROPOL_CODE,
+        cityName: "Ставрополь",
+        address,
+        costRub: 0,
+        awaitingQuote: true,
+      },
+      tariffs: [],
+    };
+  }
+
+  if (input.type === "stavropol_local") {
+    if (!isStavropolCity({ code: input.cityCode, name: cityName })) {
+      throw new Error("Местная доставка доступна только по городу Ставрополю");
+    }
     const delivery: DeliverySelection = {
       type: "stavropol_local",
       cityCode: input.cityCode,
