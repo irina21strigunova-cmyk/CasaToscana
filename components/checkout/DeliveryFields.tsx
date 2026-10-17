@@ -9,6 +9,7 @@ import type {
   DeliverySelection,
 } from "@/lib/cdek/types";
 import { formatPrice } from "@/lib/products";
+import { CDEK_MOSCOW_CODE } from "@/lib/cdek/config";
 import { PickupPointPicker } from "./PickupPointPicker";
 
 export interface DeliveryPayload {
@@ -256,9 +257,10 @@ export function DeliveryFields({
       ) : null}
 
       {city && !city.stavropolLocal ? (
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Способ доставки">
           <button
             type="button"
+            aria-pressed={type === "pvz"}
             className={`rounded-2xl px-3 py-2 text-sm ${
               type === "pvz" ? "bg-olive text-white" : "bg-milk text-foreground"
             }`}
@@ -267,10 +269,11 @@ export function DeliveryFields({
               setAddress("");
             }}
           >
-            Пункт выдачи
+            СДЭК — ПВЗ
           </button>
           <button
             type="button"
+            aria-pressed={type === "courier"}
             className={`rounded-2xl px-3 py-2 text-sm ${
               type === "courier" ? "bg-olive text-white" : "bg-milk text-foreground"
             }`}
@@ -279,16 +282,32 @@ export function DeliveryFields({
               setOfficeCode("");
             }}
           >
-            Курьер
+            СДЭК — курьер
           </button>
+          {city.code === CDEK_MOSCOW_CODE ? (
+            <button
+              type="button"
+              aria-pressed={type === "yandex_courier"}
+              className={`col-span-2 rounded-2xl px-3 py-2 text-sm ${
+                type === "yandex_courier" ? "bg-olive text-white" : "bg-milk text-foreground"
+              }`}
+              onClick={() => {
+                setType("yandex_courier");
+                setOfficeCode("");
+              }}
+            >
+              Яндекс Доставка
+            </button>
+          ) : null}
         </div>
       ) : null}
 
-      {city?.stavropolLocal ? (
+      {city && type === "yandex_courier" ? (
         <div className="mt-3 rounded-2xl border border-olive/30 bg-milk px-4 py-3">
           <p className="text-sm font-medium text-foreground">Яндекс Доставка</p>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            Курьером по Ставрополю. Укажите адрес получателя. Стоимость и время
+            {city.stavropolLocal ? "Курьером по Ставрополю." : "Курьером по Москве."}{" "}
+            Укажите адрес получателя. Стоимость и время
             доставки согласуем перед оплатой заказа.
           </p>
         </div>
@@ -317,7 +336,7 @@ export function DeliveryFields({
 
       {loading ? (
         <p className="mt-3 text-sm text-muted">
-          {city?.stavropolLocal ? "Проверяем адрес доставки…" : "Считаем доставку через СДЭК…"}
+          {type === "yandex_courier" ? "Проверяем адрес доставки…" : "Считаем доставку через СДЭК…"}
         </p>
       ) : null}
       {error ? (

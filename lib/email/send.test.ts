@@ -54,22 +54,26 @@ test("admin and buyer templates include the order id; email is not faked as sent
   assert.equal(isEmailConfigured(), false);
 });
 
-test("Yandex order emails show the carrier, address and pending delivery cost", () => {
-  const yandexOrder: PendingOrderRecord = {
-    ...order,
-    delivery: {
-      type: "yandex_courier",
-      cityCode: 439,
-      cityName: "Ставрополь",
-      address: "ул. Ленина, 1, кв. 2",
-      costRub: 0,
-      awaitingQuote: true,
-    },
-  };
-  for (const mail of [buildAdminNewOrderEmail(yandexOrder), buildBuyerOrderEmail(yandexOrder)]) {
-    assert.match(mail.html, /Яндекс Доставка/);
-    assert.match(mail.html, /ул\. Ленина, 1, кв\. 2/);
-    assert.match(mail.html, /Стоимость доставки будет рассчитана после оформления заказа/);
-    assert.doesNotMatch(mail.html, /yandex_courier/);
+test("Yandex order emails show the selected city, carrier, address and pending delivery cost", () => {
+  for (const city of [{ code: 439, name: "Ставрополь" }, { code: 44, name: "Москва" }]) {
+    const yandexOrder: PendingOrderRecord = {
+      ...order,
+      delivery: {
+        type: "yandex_courier",
+        cityCode: city.code,
+        cityName: city.name,
+        address: "ул. Ленина, 1, кв. 2",
+        costRub: 0,
+        awaitingQuote: true,
+      },
+    };
+    for (const mail of [buildAdminNewOrderEmail(yandexOrder), buildBuyerOrderEmail(yandexOrder)]) {
+      assert.match(mail.html, /Яндекс Доставка/);
+      assert.ok(mail.html.includes(`Город: ${city.name}`));
+      if (city.name === "Москва") assert.doesNotMatch(mail.html, /Ставрополь/);
+      assert.match(mail.html, /ул\. Ленина, 1, кв\. 2/);
+      assert.match(mail.html, /Стоимость доставки будет рассчитана после оформления заказа/);
+      assert.doesNotMatch(mail.html, /yandex_courier/);
+    }
   }
 });
