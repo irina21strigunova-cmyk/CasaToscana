@@ -37,6 +37,10 @@ export function CheckoutForm({
   } | null>(null);
 
   const awaitingQuote = delivery?.awaitingQuote === true;
+  const checkoutItems = useMemo(
+    () => items.map(({ productId, quantity }) => ({ productId, quantity })),
+    [items]
+  );
 
   useEffect(() => {
     void (async () => {
@@ -74,10 +78,7 @@ export function CheckoutForm({
 
   function checkoutBody() {
     return {
-      items: items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
+      items: checkoutItems,
       customer: { name, phone, email, comment },
       delivery,
     };
@@ -258,10 +259,7 @@ export function CheckoutForm({
       </div>
 
       <DeliveryFields
-        items={items.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-        }))}
+        items={checkoutItems}
         goodsTotal={total}
         onChange={setDelivery}
       />
