@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test lib/orders/calculate.test.ts lib/orders/memory-store.test.ts lib/orders/gate.test.ts lib/cdek/packages.test.ts lib/cdek/config.test.ts lib/tbank/receipt.test.ts lib/admin/session.test.ts lib/email/send.test.ts lib/supabase/server.test.ts",
+    "test": "tsx --test lib/orders/calculate.test.ts lib/orders/memory-store.test.ts lib/orders/gate.test.ts lib/cdek/packages.test.ts lib/cdek/config.test.ts lib/tbank/receipt.test.ts lib/admin/session.test.ts lib/email/send.test.ts lib/supabase/server.test.ts lib/cdek/pickup-search.test.ts",
     "clean": "node scripts/clean.mjs",
     "check:placeholders": "node scripts/ensure-category-placeholders.mjs"
   },

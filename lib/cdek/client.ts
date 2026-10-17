@@ -134,6 +134,8 @@ interface CdekOfficeRaw {
     address_full?: string;
     address?: string;
     city_code?: number;
+    latitude?: number;
+    longitude?: number;
   };
   work_time?: string;
   type?: string;
@@ -160,6 +162,8 @@ export async function listCdekOffices(cityCode: number): Promise<CdekOffice[]> {
       ),
       workTime: item.work_time ?? null,
       cityCode: item.location?.city_code ?? cityCode,
+      latitude: item.location?.latitude,
+      longitude: item.location?.longitude,
     }));
 }
 
