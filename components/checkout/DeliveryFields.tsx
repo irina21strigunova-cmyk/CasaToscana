@@ -9,6 +9,7 @@ import type {
   DeliverySelection,
 } from "@/lib/cdek/types";
 import { formatPrice } from "@/lib/products";
+import { PickupPointPicker } from "./PickupPointPicker";
 
 export interface DeliveryPayload {
   type: CdekDeliveryType;
@@ -41,6 +42,7 @@ export function DeliveryFields({
   >(null);
   const [type, setType] = useState<CdekDeliveryType>("pvz");
   const [offices, setOffices] = useState<CdekOffice[]>([]);
+  const [officesLoading, setOfficesLoading] = useState(false);
   const [officeCode, setOfficeCode] = useState("");
   const [address, setAddress] = useState("");
   const [quote, setQuote] = useState<DeliverySelection | null>(null);
@@ -79,12 +81,17 @@ export function DeliveryFields({
   useEffect(() => {
     if (!city || city.stavropolLocal || type !== "pvz") {
       setOffices([]);
+      setOfficesLoading(false);
       return;
     }
+    const controller = new AbortController();
+    setOffices([]);
+    setOfficesLoading(true);
     void (async () => {
       try {
         const response = await fetch(
-          `/api/cdek/offices?cityCode=${encodeURIComponent(String(city.code))}`
+          `/api/cdek/offices?cityCode=${encodeURIComponent(String(city.code))}`,
+          { signal: controller.signal }
         );
         const data = (await response.json()) as {
           ok?: boolean;
@@ -94,18 +101,24 @@ export function DeliveryFields({
         if (!response.ok || !data.ok) {
           throw new Error(data.error || "Не удалось загрузить ПВЗ");
         }
-        setOffices(data.offices ?? []);
+        if (!controller.signal.aborted) setOffices(data.offices ?? []);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setOffices([]);
         setError(err instanceof Error ? err.message : "Ошибка ПВЗ");
+      } finally {
+        if (!controller.signal.aborted) setOfficesLoading(false);
       }
     })();
+    return () => controller.abort();
   }, [city, type]);
 
   useEffect(() => {
+    // A newly selected city/PVZ must be quoted before checkout can use it.
+    setQuote(null);
+    onChangeRef.current(null);
+    setLoading(false);
     if (!city) {
-      setQuote(null);
-      onChangeRef.current(null);
       return;
     }
 
@@ -123,6 +136,8 @@ export function DeliveryFields({
       return;
     }
 
+    const controller = new AbortController();
+    setLoading(true);
     const timer = window.setTimeout(() => {
       void (async () => {
         setLoading(true);
@@ -130,6 +145,7 @@ export function DeliveryFields({
         try {
           const response = await fetch("/api/cdek/calculate", {
             method: "POST",
+            signal: controller.signal,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               type: deliveryType,
@@ -149,6 +165,7 @@ export function DeliveryFields({
           if (!response.ok || !data.ok || !data.delivery) {
             throw new Error(data.error || "Не удалось рассчитать доставку");
           }
+          if (controller.signal.aborted) return;
           setQuote(data.delivery);
           onChangeRef.current({
             type: data.delivery.type,
@@ -161,18 +178,22 @@ export function DeliveryFields({
             awaitingQuote: data.delivery.awaitingQuote === true,
           });
         } catch (err) {
+          if (controller.signal.aborted) return;
           setQuote(null);
           onChangeRef.current(null);
           setError(
             err instanceof Error ? err.message : "Не удалось рассчитать доставку"
           );
         } finally {
-          setLoading(false);
+          if (!controller.signal.aborted) setLoading(false);
         }
       })();
     }, 400);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [address, city, items, itemsKey, officeCode, type]);
 
   return (
@@ -262,23 +283,8 @@ export function DeliveryFields({
       ) : null}
 
       {city && type === "pvz" && !city.stavropolLocal ? (
-        <label className="mt-3 block">
-          <span className="mb-1.5 block text-xs font-medium uppercase tracking-[0.14em] text-muted">
-            Пункт выдачи СДЭК
-          </span>
-          <select
-            value={officeCode}
-            onChange={(event) => setOfficeCode(event.target.value)}
-            className="w-full rounded-2xl border border-foreground/10 bg-milk px-4 py-3 text-sm outline-none focus:border-olive/40"
-          >
-            <option value="">Выберите ПВЗ</option>
-            {offices.map((office) => (
-              <option key={office.code} value={office.code}>
-                {office.address || office.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <PickupPointPicker key={city.code} city={city} offices={offices}
+          value={officeCode} loading={officesLoading} onChange={setOfficeCode} />
       ) : null}
 
       {city && type === "courier" && !city.stavropolLocal ? (

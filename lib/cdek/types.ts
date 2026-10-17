@@ -13,6 +13,15 @@ export interface CdekOffice {
   address: string;
   workTime: string | null;
   cityCode: number;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface PickupSearchAddress {
+  label: string;
+  latitude: number;
+  longitude: number;
+  precision: "house" | "street";
 }
 
 export interface CdekPackage {
