@@ -8,7 +8,7 @@ import type {
   PendingOrderRecord,
 } from "@/lib/orders/types";
 import { goodsRubFromLines } from "@/lib/orders/types";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { describeSupabaseError, getSupabaseAdmin } from "@/lib/supabase/server";
 
 interface OrderRow {
   order_id: string;
@@ -150,7 +150,7 @@ export function createSupabaseOrderStore(): OrderStore {
         .select("*")
         .single();
       if (error || !data) {
-        throw new Error(error?.message || "Не удалось сохранить заказ");
+        throw new Error(describeSupabaseError(error));
       }
       await appendHistory(full.orderId, null, status, "created");
       return fromRow(data as OrderRow, [
@@ -207,7 +207,7 @@ export function createSupabaseOrderStore(): OrderStore {
         .select("*")
         .single();
       if (error || !data) {
-        throw new Error(error?.message || "Не удалось обновить заказ");
+        throw new Error(describeSupabaseError(error));
       }
       if (patch.status && patch.status !== current.status) {
         await appendHistory(orderId, current.status, nextStatus, note);
@@ -223,7 +223,7 @@ export function createSupabaseOrderStore(): OrderStore {
         .eq("order_id", orderId)
         .maybeSingle();
       if (error) {
-        throw new Error(error.message);
+        throw new Error(describeSupabaseError(error));
       }
       if (!data) return undefined;
       return fromRow(data as OrderRow, await loadHistory(orderId));
@@ -237,7 +237,7 @@ export function createSupabaseOrderStore(): OrderStore {
         .eq("payment_id", paymentId)
         .maybeSingle();
       if (error) {
-        throw new Error(error.message);
+        throw new Error(describeSupabaseError(error));
       }
       if (!data) return undefined;
       const row = data as OrderRow;
@@ -261,7 +261,7 @@ export function createSupabaseOrderStore(): OrderStore {
         .order("created_at", { ascending: false })
         .limit(limit);
       if (error) {
-        throw new Error(error.message);
+        throw new Error(describeSupabaseError(error));
       }
       return ((data ?? []) as OrderRow[]).map((row) => fromRow(row));
     },
@@ -311,7 +311,7 @@ export function createSupabaseOrderStore(): OrderStore {
         .select("*")
         .maybeSingle();
       if (first.error) {
-        throw new Error(first.error.message);
+        throw new Error(describeSupabaseError(first.error));
       }
 
       let claimed = first.data as OrderRow | null;
@@ -327,7 +327,7 @@ export function createSupabaseOrderStore(): OrderStore {
           .select("*")
           .maybeSingle();
         if (stale.error) {
-          throw new Error(stale.error.message);
+          throw new Error(describeSupabaseError(stale.error));
         }
         claimed = (stale.data as OrderRow | null) ?? null;
       }
