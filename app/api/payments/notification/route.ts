@@ -36,24 +36,28 @@ export async function POST(request: Request) {
       typeof payload.Status === "string" ? payload.Status : undefined;
 
     if (orderId && paymentId) {
-      rememberPaymentMapping(orderId, paymentId);
+      await rememberPaymentMapping(orderId, paymentId);
     }
 
     const order =
-      (orderId ? getOrderByOrderId(orderId) : undefined) ??
-      (paymentId ? findOrderByPaymentId(paymentId) : undefined);
+      (orderId ? await getOrderByOrderId(orderId) : undefined) ??
+      (paymentId ? await findOrderByPaymentId(paymentId) : undefined);
 
     if (order) {
       const paid = isSuccessfulPaymentStatus(status);
       const refunded = isRefundedPaymentStatus(status);
-      updateOrderByOrderId(order.orderId, {
-        paymentId: paymentId ?? order.paymentId,
-        status: paid ? "PAID" : refunded ? "REFUNDED" : status || order.status,
-        paidAt: paid ? new Date().toISOString() : order.paidAt,
-        refundedAt: refunded
-          ? new Date().toISOString()
-          : order.refundedAt,
-      });
+      await updateOrderByOrderId(
+        order.orderId,
+        {
+          paymentId: paymentId ?? order.paymentId,
+          status: paid ? "PAID" : refunded ? "REFUNDED" : status || order.status,
+          paidAt: paid ? new Date().toISOString() : order.paidAt,
+          refundedAt: refunded
+            ? new Date().toISOString()
+            : order.refundedAt,
+        },
+        paid ? "tbank-paid" : refunded ? "tbank-refunded" : "tbank-status"
+      );
     }
 
     return new NextResponse("OK", {

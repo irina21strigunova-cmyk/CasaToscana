@@ -39,15 +39,15 @@ export async function POST(request: Request) {
     }
 
     const order = orderId
-      ? getOrderByOrderId(orderId)
+      ? await getOrderByOrderId(orderId)
       : paymentIdParam
-        ? findOrderByPaymentId(paymentIdParam)
+        ? await findOrderByPaymentId(paymentIdParam)
         : undefined;
 
     const paymentId =
       paymentIdParam ||
       order?.paymentId ||
-      (orderId ? getPaymentIdByOrderId(orderId) : undefined);
+      (orderId ? await getPaymentIdByOrderId(orderId) : undefined);
 
     if (!paymentId) {
       return NextResponse.json(
@@ -58,15 +58,15 @@ export async function POST(request: Request) {
 
     const state = await getPaymentState(paymentId);
     if (state.OrderId) {
-      rememberPaymentMapping(String(state.OrderId), paymentId);
+      await rememberPaymentMapping(String(state.OrderId), paymentId);
     }
 
     if (isRefundedPaymentStatus(state.Status)) {
       if (order) {
-        updateOrderByOrderId(order.orderId, {
+        await updateOrderByOrderId(order.orderId, {
           status: "REFUNDED",
           refundedAt: order.refundedAt ?? new Date().toISOString(),
-        });
+        }, "already-refunded");
       }
       return NextResponse.json({
         ok: true,
@@ -98,11 +98,11 @@ export async function POST(request: Request) {
       cancel.Status === "CANCELED";
 
     if (order) {
-      updateOrderByOrderId(order.orderId, {
+      await updateOrderByOrderId(order.orderId, {
         paymentId,
         status: refunded ? "REFUNDED" : cancel.Status ?? order.status,
         refundedAt: refunded ? new Date().toISOString() : order.refundedAt,
-      });
+      }, "refund");
     }
 
     return NextResponse.json({

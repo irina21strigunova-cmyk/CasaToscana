@@ -7,6 +7,11 @@ export default function ProfilePage() {
       <p className="mt-2 text-sm text-muted">
         Авторизация через Telegram будет добавлена на следующем этапе.
       </p>
+      <p className="mt-4 text-sm">
+        <a href="/orders" className="text-olive underline">
+          Найти заказ по номеру и email
+        </a>
+      </p>
 
       <div className="mt-8 rounded-2xl bg-cream p-6 text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-milk-dark">

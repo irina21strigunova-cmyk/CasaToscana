@@ -99,9 +99,9 @@ export async function POST(request: Request) {
     }
 
     const order = orderId
-      ? getOrderByOrderId(orderId)
+      ? await getOrderByOrderId(orderId)
       : paymentIdParam
-        ? findOrderByPaymentId(paymentIdParam)
+        ? await findOrderByPaymentId(paymentIdParam)
         : undefined;
 
     if (!order) {
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     const paymentId =
       paymentIdParam ||
       order.paymentId ||
-      getPaymentIdByOrderId(order.orderId);
+      (await getPaymentIdByOrderId(order.orderId));
 
     if (!paymentId) {
       return NextResponse.json(
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
 
     const state = await getPaymentState(paymentId);
     if (state.OrderId) {
-      rememberPaymentMapping(String(state.OrderId), paymentId);
+      await rememberPaymentMapping(String(state.OrderId), paymentId);
     }
 
     if (isRefundedPaymentStatus(state.Status) || order.refundedAt) {
@@ -205,12 +205,12 @@ export async function POST(request: Request) {
       );
     }
 
-    updateOrderByOrderId(order.orderId, {
+    await updateOrderByOrderId(order.orderId, {
       paymentId,
       lines: shipment.lines,
       shippedAt,
       closingReceiptSentAt: now,
-    });
+    }, "closing-receipt");
 
     return NextResponse.json({
       ok: true,

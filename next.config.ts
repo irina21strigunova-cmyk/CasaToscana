@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     "/api/payments/notification": ["./certs/russian-trusted-ca-bundle.pem"],
     "/api/payments/refund": ["./certs/russian-trusted-ca-bundle.pem"],
     "/api/payments/closing-receipt": ["./certs/russian-trusted-ca-bundle.pem"],
+    "/api/payments/confirm-delivery": ["./certs/russian-trusted-ca-bundle.pem"],
   },
   webpack: (config, { dev }) => {
     // Avoid corrupted pack.gz cache on Windows when .next is cleared mid-session.

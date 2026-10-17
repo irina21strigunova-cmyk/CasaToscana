@@ -8,10 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test lib/orders/calculate.test.ts lib/orders/memory-store.test.ts lib/orders/gate.test.ts lib/cdek/packages.test.ts lib/cdek/config.test.ts lib/tbank/receipt.test.ts lib/admin/session.test.ts lib/email/send.test.ts",
     "clean": "node scripts/clean.mjs",
     "check:placeholders": "node scripts/ensure-category-placeholders.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
     "next": "15.5.20",
     "react": "19.1.0",
@@ -28,6 +30,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.20",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

@@ -1,17 +1,10 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-
-function secretsEqual(left: string, right: string): boolean {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
+import { isOpsAuthorized } from "@/lib/admin/session";
 
 /**
- * Protects refund / closing-receipt routes.
+ * Protects refund / closing-receipt / confirm-delivery / admin order routes.
  * Set TBANK_OPS_SECRET in the environment; send it as
- * `Authorization: Bearer …` or `x-ops-secret`.
+ * `Authorization: Bearer …`, `x-ops-secret`, or an HttpOnly ops cookie.
  */
 export function authorizeOpsRequest(request: Request): NextResponse | null {
   const secret = process.env.TBANK_OPS_SECRET?.trim();
@@ -22,13 +15,7 @@ export function authorizeOpsRequest(request: Request): NextResponse | null {
     );
   }
 
-  const header = request.headers.get("authorization");
-  const bearer = header?.toLowerCase().startsWith("bearer ")
-    ? header.slice(7).trim()
-    : "";
-  const provided = bearer || request.headers.get("x-ops-secret")?.trim() || "";
-
-  if (!provided || !secretsEqual(provided, secret)) {
+  if (!isOpsAuthorized(request)) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 

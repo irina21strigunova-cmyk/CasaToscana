@@ -20,6 +20,7 @@ export type TbankPaymentMethod =
 
 export type TbankPaymentObject =
   | "commodity"
+  | "service"
   | "goods_without_marking_code"
   | "goods_with_marking_code";
 
@@ -44,7 +45,7 @@ export interface TbankReceiptItem {
   Tax: typeof TBANK_TAX;
   PaymentMethod: TbankPaymentMethod;
   PaymentObject: TbankPaymentObject;
-  MeasurementUnit: typeof TBANK_MEASUREMENT_UNIT;
+  MeasurementUnit: string;
   MarkProcessingMode?: string;
   MarkCode?: TbankReceiptMarkCode;
 }
@@ -125,7 +126,7 @@ function buildItem(
     Amount: price * quantity,
     Tax: TBANK_TAX,
     PaymentMethod: paymentMethod,
-    PaymentObject: TBANK_PAYMENT_OBJECT_DEFAULT,
+    PaymentObject: line.paymentObject ?? TBANK_PAYMENT_OBJECT_DEFAULT,
     MeasurementUnit: TBANK_MEASUREMENT_UNIT,
   };
 

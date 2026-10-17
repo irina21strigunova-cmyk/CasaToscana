@@ -28,6 +28,12 @@ export interface Product {
   article?: string;
   price: number | null;
   volume?: string;
+  /** Real packed weight in grams. Required for CDEK rate calculation. */
+  weightGrams?: number;
+  /** Packed size in millimetres. Sent to CDEK only when all three are set. */
+  lengthMm?: number;
+  widthMm?: number;
+  heightMm?: number;
   image?: string;
   imageColor: string;
   featured?: boolean;

@@ -4,6 +4,7 @@ import {
   getOrderByOrderId,
   getPaymentIdByOrderId,
   rememberPaymentMapping,
+  updateOrderByOrderId,
 } from "@/lib/orders/store";
 import { checkOrder, getPaymentState } from "@/lib/tbank/client";
 import {
@@ -74,15 +75,15 @@ export async function GET(request: Request) {
     }
 
     const local = orderId
-      ? getOrderByOrderId(orderId)
+      ? await getOrderByOrderId(orderId)
       : paymentIdParam
-        ? findOrderByPaymentId(paymentIdParam)
+        ? await findOrderByPaymentId(paymentIdParam)
         : undefined;
 
     let paymentId =
       paymentIdParam ||
       local?.paymentId ||
-      (orderId ? getPaymentIdByOrderId(orderId) : undefined) ||
+      (orderId ? await getPaymentIdByOrderId(orderId) : undefined) ||
       null;
 
     if (!paymentId && orderId) {
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
 
       if (resolved) {
         paymentId = resolved;
-        rememberPaymentMapping(orderId, resolved);
+        await rememberPaymentMapping(orderId, resolved);
       }
     }
 
@@ -129,7 +130,10 @@ export async function GET(request: Request) {
 
     const state = await getPaymentState(paymentId);
     if (orderId || state.OrderId) {
-      rememberPaymentMapping(String(state.OrderId ?? orderId), String(state.PaymentId ?? paymentId));
+      await rememberPaymentMapping(
+        String(state.OrderId ?? orderId),
+        String(state.PaymentId ?? paymentId)
+      );
     }
 
     logTbankStatus({
@@ -144,6 +148,30 @@ export async function GET(request: Request) {
 
     const outcome = classifyPaymentStatus(state.Status);
     const paid = outcome === "paid";
+    const resolvedOrderId = String(state.OrderId ?? local?.orderId ?? orderId ?? "");
+    if (resolvedOrderId && (paid || outcome === "failed" || outcome === "refunded")) {
+      try {
+        await updateOrderByOrderId(
+          resolvedOrderId,
+          {
+            paymentId: String(state.PaymentId ?? paymentId),
+            status: paid
+              ? "PAID"
+              : outcome === "refunded"
+                ? "REFUNDED"
+                : state.Status ?? local?.status,
+            paidAt: paid ? local?.paidAt ?? new Date().toISOString() : local?.paidAt,
+            refundedAt:
+              outcome === "refunded"
+                ? local?.refundedAt ?? new Date().toISOString()
+                : local?.refundedAt,
+          },
+          "tbank-getstate"
+        );
+      } catch (error) {
+        console.error("[payments/status] order update failed", error);
+      }
+    }
 
     return noStoreJson({
       ok: true,

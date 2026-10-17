@@ -1,3 +1,4 @@
+import type { DeliverySelection } from "@/lib/cdek/types";
 import { getProductById } from "@/lib/products";
 import type { CartItem, ProductMarkCode } from "@/types/product";
 
@@ -17,16 +18,20 @@ export interface OrderLine {
   requiresMarking?: boolean;
   /** Real scanned code only; omitted until shipment. */
   markCode?: ProductMarkCode;
+  paymentObject?: "commodity" | "service";
 }
 
 export interface CalculatedOrder {
   lines: OrderLine[];
   totalRub: number;
   amountKopecks: number;
+  goodsRub: number;
+  delivery: DeliverySelection | null;
 }
 
 export function calculateOrderFromCartItems(
-  items: CartItem[]
+  items: CartItem[],
+  delivery: DeliverySelection | null = null
 ): CalculatedOrder {
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error("Корзина пуста");
@@ -61,7 +66,39 @@ export function calculateOrderFromCartItems(
     });
   }
 
-  const totalRub = lines.reduce((sum, line) => sum + line.lineTotalRub, 0);
+  return attachDeliveryLine(lines, delivery);
+}
+
+export function attachDeliveryLine(
+  goodsLines: OrderLine[],
+  delivery: DeliverySelection | null = null
+): CalculatedOrder {
+  const lines = goodsLines.filter((line) => line.productId !== "delivery-cdek");
+  if (lines.length === 0) {
+    throw new Error("В заказе нет товаров");
+  }
+
+  const goodsRub = lines.reduce((sum, line) => sum + line.lineTotalRub, 0);
+  const deliveryRub =
+    delivery && delivery.costRub > 0
+      ? Math.round(delivery.costRub * 100) / 100
+      : 0;
+
+  if (deliveryRub > 0 && delivery) {
+    lines.push({
+      productId: "delivery-cdek",
+      name: `Доставка СДЭК${delivery.tariffName ? ` · ${delivery.tariffName}` : ""}`.slice(
+        0,
+        128
+      ),
+      quantity: 1,
+      unitPriceRub: deliveryRub,
+      lineTotalRub: deliveryRub,
+      paymentObject: "service",
+    });
+  }
+
+  const totalRub = goodsRub + deliveryRub;
   if (totalRub <= 0) {
     throw new Error("Сумма заказа должна быть больше нуля");
   }
@@ -69,6 +106,8 @@ export function calculateOrderFromCartItems(
   return {
     lines,
     totalRub,
+    goodsRub,
+    delivery,
     amountKopecks: Math.round(totalRub * 100),
   };
 }
