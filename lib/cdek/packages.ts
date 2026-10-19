@@ -32,7 +32,7 @@ function approximateContentGrams(product: Product): number {
     return product.weightGrams;
   }
   const volume = product.volume?.trim().toLowerCase().replace(",", ".");
-  const match = volume?.match(/(\d+(?:\.\d+)?)\s*(мл|ml|л|литр(?:а|ов)?|г|гр|kg|кг)\b/u);
+  const match = volume?.match(/(\d+(?:\.\d+)?)\s*(мл|ml|л|литр(?:а|ов)?|г|гр|kg|кг)(?=$|[^а-яa-z0-9])/u);
   if (!match) return DEFAULT_CONTENT_GRAMS;
   const amount = Number(match[1]);
   if (!Number.isFinite(amount) || amount <= 0) return DEFAULT_CONTENT_GRAMS;
