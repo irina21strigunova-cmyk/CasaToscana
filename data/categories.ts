@@ -6,7 +6,9 @@ export interface CatalogCategory {
 /** Single source of truth for catalog filters and homepage collections. */
 export const catalogCategories: CatalogCategory[] = [
   { slug: "body", name: "Уход за телом" },
+  { slug: "hair", name: "Уход за волосами" },
   { slug: "face", name: "Уход за лицом" },
+  { slug: "men", name: "Для мужчин" },
   { slug: "prima-fioritura", name: "Линия Prima Fioritura" },
   { slug: "bio-le-veneri", name: "Линия Bio Le Veneri" },
   { slug: "home", name: "Косметика для дома" },
@@ -104,6 +106,26 @@ export const boutiqueCategories: BoutiqueCategory[] = [
     image: "/categories/Подарочный набор.jpg",
     imagePosition: "center 42%",
     overlay: "rgba(180, 150, 120, 0.12)",
+    layout: "tall",
+  },
+  {
+    slug: "hair",
+    name: "Уход за волосами",
+    subtitle: "Шампуни и бальзамы Prima Spremitura",
+    collection: "08",
+    image: "/products/new-2026-10/430042.jpg",
+    imagePosition: "center 45%",
+    overlay: "rgba(168, 149, 120, 0.16)",
+    layout: "tall",
+  },
+  {
+    slug: "men",
+    name: "Для мужчин",
+    subtitle: "Аромат и уход Primo Soffio",
+    collection: "09",
+    image: "/products/new-2026-10/430300.jpg",
+    imagePosition: "center 45%",
+    overlay: "rgba(80, 65, 55, 0.16)",
     layout: "tall",
   },
 ];
