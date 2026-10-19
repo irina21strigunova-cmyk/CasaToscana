@@ -1,14 +1,21 @@
 import { getProductById } from "@/lib/products";
-import type { CartItem } from "@/types/product";
+import type { Product, CartItem } from "@/types/product";
 import type { CdekPackage } from "@/lib/cdek/types";
+
+/**
+ * These are conservative SHIPPING ESTIMATES, not measured product specifications.
+ * Transport cartons and protective fill are part of the estimate.
+ * Do not display estimated weight as a verified product characteristic.
+ */
+const DEFAULT_CONTENT_GRAMS = 350;
+const PER_ITEM_PACKAGING_GRAMS = 140;
+const CARTON_PACKING_GRAMS = 250;
+const MAX_ESTIMATED_CONTENT_GRAMS_PER_CARTON = 3000;
 
 export class CdekCatalogWeightMissingError extends Error {
   readonly missing: string[];
-
   constructor(missing: string[]) {
-    super(
-      `Для расчёта СДЭК не задан вес: ${missing.join(", ")}. Без реального веса тариф не считаем.`
-    );
+    super(`Невозможно оценить упаковку: ${missing.join(", ")}`);
     this.name = "CdekCatalogWeightMissingError";
     this.missing = missing;
   }
@@ -20,46 +27,62 @@ export function isCdekCatalogWeightMissingError(
   return error instanceof CdekCatalogWeightMissingError;
 }
 
-/**
- * Build CDEK packages from catalog data only.
- * Never invents weight or dimensions — missing weightGrams blocks calculation.
- */
-export function buildCdekPackages(items: CartItem[]): CdekPackage[] {
-  if (!Array.isArray(items) || items.length === 0) {
-    throw new Error("Корзина пуста");
+function approximateContentGrams(product: Product): number {
+  if (product.weightGrams && product.weightGrams > 0) {
+    return product.weightGrams;
   }
+  const volume = product.volume?.trim().toLowerCase().replace(",", ".");
+  const match = volume?.match(/(\d+(?:\.\d+)?)\s*(мл|ml|л|литр(?:а|ов)?|г|гр|kg|кг)(?=$|[^а-яa-z0-9])/u);
+  if (!match) return DEFAULT_CONTENT_GRAMS;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return DEFAULT_CONTENT_GRAMS;
+  const unit = match[2];
+  const grams = unit === "л" || unit.startsWith("литр")
+    ? amount * 1200
+    : unit === "кг" || unit === "kg"
+      ? amount * 1000
+      : unit === "г" || unit === "гр"
+        ? amount
+        : amount * 1.2; // 1.2 g/ml: deliberately conservative for cosmetic liquids
+  return Math.max(30, Math.ceil(grams));
+}
 
-  const missing: string[] = [];
-  const packages: CdekPackage[] = [];
-
+/** Estimate one or more complete outer cartons; CDEK dimensions are in cm. */
+export function buildCdekPackages(items: CartItem[]): CdekPackage[] {
+  if (!Array.isArray(items) || items.length === 0) throw new Error("Корзина пуста");
+  const unitWeights: number[] = [];
   for (const item of items) {
-    if (!item?.productId || !Number.isFinite(item.quantity) || item.quantity < 1) {
-      throw new Error("Некорректная позиция корзины");
+    if (!item?.productId || !Number.isInteger(item.quantity) ||
+        item.quantity < 1 || item.quantity > 100) {
+      throw new Error("Некорректное количество в корзине");
     }
     const product = getProductById(item.productId);
-    if (!product) {
-      throw new Error(`Товар не найден: ${item.productId}`);
+    if (!product) throw new Error(`Товар не найден: ${item.productId}`);
+    for (let i = 0; i < item.quantity; i++) {
+      unitWeights.push(approximateContentGrams(product) + PER_ITEM_PACKAGING_GRAMS);
     }
-
-    const quantity = Math.floor(item.quantity);
-    const weightGrams = product.weightGrams;
-    if (!weightGrams || weightGrams < 1) {
-      missing.push(product.name);
-      continue;
-    }
-
-    const pack: CdekPackage = { weight: weightGrams * quantity };
-    if (product.lengthMm && product.widthMm && product.heightMm) {
-      pack.length = Math.ceil(product.lengthMm / 10);
-      pack.width = Math.ceil(product.widthMm / 10);
-      pack.height = Math.ceil(product.heightMm / 10) * quantity;
-    }
-    packages.push(pack);
   }
 
-  if (missing.length > 0) {
-    throw new CdekCatalogWeightMissingError(missing);
+  const cartons: number[] = [];
+  let cartonWeight = 0;
+  for (const weight of unitWeights) {
+    if (cartonWeight && cartonWeight + weight > MAX_ESTIMATED_CONTENT_GRAMS_PER_CARTON) {
+      cartons.push(cartonWeight);
+      cartonWeight = 0;
+    }
+    cartonWeight += weight;
+    if (cartonWeight > MAX_ESTIMATED_CONTENT_GRAMS_PER_CARTON) {
+      cartons.push(cartonWeight);
+      cartonWeight = 0;
+    }
   }
+  if (cartonWeight) cartons.push(cartonWeight);
 
-  return packages;
+  return cartons.map((weight) => {
+    const total = weight + CARTON_PACKING_GRAMS;
+    // Standardized conservative outer box sizes, not actual measured cartons.
+    const dims = total <= 1100 ? [25, 20, 15]
+      : total <= 2400 ? [35, 25, 20] : [40, 30, 25];
+    return { weight: total, length: dims[0], width: dims[1], height: dims[2] };
+  });
 }
