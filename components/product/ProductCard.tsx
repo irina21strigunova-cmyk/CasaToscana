@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/Button";
+import Link from "next/link";
+import { AddToCartButton } from "@/components/product/AddToCartButton";
 import { formatPrice, formatShortDescription } from "@/lib/products";
-import { useCartStore } from "@/lib/cart/store";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
@@ -12,7 +12,6 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, className }: ProductCardProps) {
-  const addItem = useCartStore((s) => s.addItem);
   const hasImage = Boolean(product.image);
   const shortDescription = formatShortDescription(product.description ?? "");
   const title = product.volume
@@ -27,7 +26,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
         className
       )}
     >
-      <div className="relative aspect-[2/3] w-full shrink-0 overflow-hidden bg-milk">
+      <Link
+        href={`/catalog/${product.slug}`}
+        prefetch={false}
+        aria-label={title}
+        className="relative aspect-[2/3] w-full shrink-0 overflow-hidden bg-milk"
+      >
         {hasImage ? (
           <img
             src={encodeURI(product.image!)}
@@ -40,11 +44,13 @@ export function ProductCard({ product, className }: ProductCardProps) {
             style={{ backgroundColor: product.imageColor }}
           />
         )}
-      </div>
+      </Link>
 
       <div className="flex min-w-0 flex-1 flex-col px-3 pb-3 pt-2.5">
         <h3 className="font-display line-clamp-2 break-words text-[15px] font-semibold leading-snug text-foreground sm:text-base">
-          {title}
+          <Link href={`/catalog/${product.slug}`} prefetch={false} className="hover:underline">
+            {title}
+          </Link>
         </h3>
 
         {shortDescription ? (
@@ -59,13 +65,10 @@ export function ProductCard({ product, className }: ProductCardProps) {
               {formatPrice(product.price)}
             </span>
           ) : null}
-          <Button
-            size="sm"
+          <AddToCartButton
+            productId={product.id}
             className={cn("min-h-11 w-full text-sm", hasPrice && "mt-2")}
-            onClick={() => addItem(product.id)}
-          >
-            В корзину
-          </Button>
+          />
         </div>
       </div>
     </article>
